@@ -15,20 +15,28 @@
             </div>
             <div class="chatbox__content--header">
                 <h4 class="chatbox__heading--header">Chat Support</h4>
-                <p class="chatbox__description--header">Hi. My name is Sam. How can I help you?</p>
+                <p class="chatbox__description--header">Welcome to Cloud4green</p>
             </div>
         </div>
-        <div class="chatbox__messages" id="messages"></div>
+
+        <div class="chatbox__messages"></div>
+
+        <!-- Suggestions box placed inside the chatbox for better UI -->
+        <div id="suggestions" class="suggestions-box"></div>
+
         <div class="chatbox__footer">
             <input type="text" id="chatbox__input" placeholder="Write a message...">
             <button class="chatbox__send--footer" id="send__button">Send</button>
         </div>
     </div>
+
     <div class="chatbox__button">
         <button><img src="chatbox-icon.svg" alt="Chatbox Icon"></button>
     </div>
 </div>
-<script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
-<script src="app.js"></script>
+
+<!-- External scripts -->
+<script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2" defer></script>
+<script src="index.js" defer></script>
 </body>
 </html>
