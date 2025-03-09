@@ -137,9 +137,35 @@ document.addEventListener('DOMContentLoaded', function () {
         "What is Ethical Hacking?": "The practice of legally testing and identifying vulnerabilities in systems to improve their security.",
         "What is Robotics?": "The field of designing, building, and programming robots to perform tasks traditionally done by humans.",
         "What is Linux?": "An open-source operating system widely used for servers, desktops, and embedded systems.",
-        "What is Digital Marketing?": "The promotion of products or services using digital channels such as social media, search engines, and email."
-    
+        "What is Digital Marketing?": "The promotion of products or services using digital channels such as social media, search engines, and email.",
+        "good morning": "Good morning! How can I help you today?",
+        "good afternoon": "Good afternoon! What can I do for you?",
+        "good evening": "Good evening! How can I assist you?",
+        "hey": "Hey there! How can I help you?",
+        "greetings": "Greetings! How can I assist you today?",
+        "howdy": "Howdy! What can I do for you?",
+        "thank you": "You're welcome! How else can I assist you?",
+        "thanks": "You're welcome! Let me know if you need anything else.",
+        "thank you so much": "You're very welcome! Happy to help.",
+        "thanks a lot": "You're welcome! Feel free to ask if you have more questions.",
+        "thank you very much": "You're very welcome! How can I assist you further?",
+        "what is your address": "Our address is: Cloud4Green, 23, 3rd Main, Nethaji Nagar, Hebbal, Kempapura, Bangalore - 560024.",
+        "where are you located": "We are located at: Cloud4Green, 23, 3rd Main, Nethaji Nagar, Hebbal, Kempapura, Bangalore - 560024.",
+        "how can I visit your office": "You can visit us at: Cloud4Green, 23, 3rd Main, Nethaji Nagar, Hebbal, Kempapura, Bangalore - 560024.",
+        "what is your contact number": "You can reach us at (+91) 7022424545.",
+        "how can I contact you": "You can contact us at (+91) 7022424545 or email us at reach@cloud4green.com.",
+        "what is your email address": "Our email address is reach@cloud4green.com.",
+        "how do I reach cloud4green": "You can reach us at (+91) 7022424545 or visit us at: Cloud4Green, 23, 3rd Main, Nethaji Nagar, Hebbal, Kempapura, Bangalore - 560024.",
+        "where is cloud4green located": "We are located at: Cloud4Green, 23, 3rd Main, Nethaji Nagar, Hebbal, Kempapura, Bangalore - 560024.",
+        "can I call cloud4green": "Yes, you can call us at (+91) 7022424545.",
+        "how do I email cloud4green": "You can email us at reach@cloud4green.com.",
+        "contct us":"You can contact us at (+91) 7022424545 or email us at reach@cloud4green.com."
     };
+
+    // List of common words to ignore during matching
+    const commonWords = new Set([
+        "what", "where", "do", "will", "can", "are", "which", "how", "is", "the", "a", "an", "and", "or", "in", "on", "at", "to", "for", "with", "of", "by", "about", "as", "it", "this", "that", "these", "those", "am", "is", "are", "was", "were", "be", "been", "being", "have", "has", "had", "having", "do", "does", "did", "doing", "will", "would", "shall", "should", "can", "could", "may", "might", "must", "ought"
+    ]);
 
     chatboxButton.addEventListener('click', function () {
         chatboxSupport.classList.toggle('chatbox--active');
@@ -166,11 +192,15 @@ document.addEventListener('DOMContentLoaded', function () {
         } else if (e.key === 'Enter') {
             e.preventDefault();
             if (selectedIndex >= 0) {
+                // Submit the selected suggestion
                 chatboxInput.value = suggestions[selectedIndex].textContent;
                 suggestionsBox.innerHTML = '';
                 suggestionsBox.style.display = 'none';
+                generateResponse();
+            } else {
+                // Submit the user's input as-is
+                generateResponse();
             }
-            generateResponse();
         }
     });
 
@@ -190,7 +220,7 @@ document.addEventListener('DOMContentLoaded', function () {
         selectedIndex = -1;
 
         if (query) {
-            const suggestions = Object.keys(responses).filter(q => q.toLowerCase().includes(query));
+            const suggestions = getSuggestions(query);
             if (suggestions.length > 0) {
                 suggestionsBox.style.display = 'block';
                 suggestionsBox.style.opacity = '0.8';
@@ -210,6 +240,43 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    function getSuggestions(query) {
+        const suggestions = [];
+        const queryWords = query.split(' ').filter(word => !commonWords.has(word)); // Filter out common words
+
+        // Iterate through all possible questions
+        Object.keys(responses).forEach(question => {
+            const lowerQuestion = question.toLowerCase();
+
+            // Check for partial match (substring match)
+            if (lowerQuestion.includes(query)) {
+                suggestions.push({ question, score: 1 }); // High score for exact substring match
+            } else {
+                // Check for word-level matching (ignoring common words)
+                let wordMatchScore = 0;
+                queryWords.forEach(word => {
+                    if (lowerQuestion.includes(word)) {
+                        wordMatchScore += 1; // Increase score for each matching word
+                    }
+                });
+
+                // Check for fuzzy match using Jaro-Winkler similarity
+                const similarityScore = jaroWinkler(query, lowerQuestion);
+                const totalScore = wordMatchScore + similarityScore;
+
+                if (totalScore > 0.6) { // Adjust threshold as needed
+                    suggestions.push({ question, score: totalScore });
+                }
+            }
+        });
+
+        // Sort suggestions by score (highest first)
+        suggestions.sort((a, b) => b.score - a.score);
+
+        // Return only the top 5 suggestions
+        return suggestions.slice(0, 5).map(item => item.question);
+    }
+
     function generateResponse() {
         const query = chatboxInput.value.trim().toLowerCase();
         if (query) {
@@ -226,45 +293,69 @@ document.addEventListener('DOMContentLoaded', function () {
         let bestMatch = null;
         let highestScore = 0;
         Object.keys(responses).forEach(question => {
-            let score = similarity(input, question);
+            const score = jaroWinkler(input, question.toLowerCase());
             if (score > highestScore) {
                 highestScore = score;
                 bestMatch = responses[question];
             }
         });
-        return highestScore > 0.5 ? bestMatch : null;
+        return highestScore > 0.6 ? bestMatch : null; // Adjust threshold as needed
     }
 
-    function similarity(str1, str2) {
-        const longer = str1.length > str2.length ? str1 : str2;
-        const shorter = str1.length > str2.length ? str2 : str1;
-        const longerLength = longer.length;
-        if (longerLength === 0) return 1.0;
-        return (longerLength - editDistance(longer, shorter)) / parseFloat(longerLength);
+    // Jaro-Winkler Similarity Algorithm
+    function jaroWinkler(str1, str2) {
+        const jaroDistance = jaro(str1, str2);
+        const prefixLength = getCommonPrefixLength(str1, str2);
+        const scalingFactor = 0.1; // Adjust scaling factor as needed
+        return jaroDistance + prefixLength * scalingFactor * (1 - jaroDistance);
     }
 
-    function editDistance(str1, str2) {
-        const matrix = [];
-        for (let i = 0; i <= str1.length; i++) {
-            matrix[i] = [i];
-        }
-        for (let j = 0; j <= str2.length; j++) {
-            matrix[0][j] = j;
-        }
-        for (let i = 1; i <= str1.length; i++) {
-            for (let j = 1; j <= str2.length; j++) {
-                if (str1.charAt(i - 1) === str2.charAt(j - 1)) {
-                    matrix[i][j] = matrix[i - 1][j - 1];
-                } else {
-                    matrix[i][j] = Math.min(
-                        matrix[i - 1][j] + 1,
-                        matrix[i][j - 1] + 1,
-                        matrix[i - 1][j - 1] + 1
-                    );
+    function jaro(str1, str2) {
+        const matchDistance = Math.floor(Math.max(str1.length, str2.length) / 2) - 1;
+        const str1Matches = new Array(str1.length).fill(false);
+        const str2Matches = new Array(str2.length).fill(false);
+        let matches = 0;
+        let transpositions = 0;
+
+        for (let i = 0; i < str1.length; i++) {
+            const start = Math.max(0, i - matchDistance);
+            const end = Math.min(i + matchDistance + 1, str2.length);
+            for (let j = start; j < end; j++) {
+                if (!str2Matches[j] && str1[i] === str2[j]) {
+                    str1Matches[i] = true;
+                    str2Matches[j] = true;
+                    matches++;
+                    break;
                 }
             }
         }
-        return matrix[str1.length][str2.length];
+
+        if (matches === 0) return 0;
+
+        let k = 0;
+        for (let i = 0; i < str1.length; i++) {
+            if (str1Matches[i]) {
+                while (!str2Matches[k]) k++;
+                if (str1[i] !== str2[k]) transpositions++;
+                k++;
+            }
+        }
+
+        return (
+            (matches / str1.length +
+                matches / str2.length +
+                (matches - transpositions / 2) / matches) / 3
+        );
+    }
+
+    function getCommonPrefixLength(str1, str2) {
+        const maxLength = Math.min(4, str1.length, str2.length); // Limit prefix length to 4
+        let prefixLength = 0;
+        for (let i = 0; i < maxLength; i++) {
+            if (str1[i] === str2[i]) prefixLength++;
+            else break;
+        }
+        return prefixLength;
     }
 
     function displayMessage(message, sender) {
